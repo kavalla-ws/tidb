@@ -71,9 +71,9 @@ func (e *mppTaskGenerator) generateMPPTasksForFragment(f *Fragment) (tasks []*kv
 		}
 	}
 	if f.TableScan != nil {
-		tasks, err = e.constructMPPTasksImpl(context.Background(), f.TableScan.Table.ID, f.TableScan.Ranges)
+		tasks, err = e.constructMPPTasksImpl(context.Background(), f.TableScan.Table.ID, f.TableScan.Table.IsCommonHandle, f.TableScan.Ranges)
 	} else {
-		tasks, err = e.constructMPPTasksImpl(context.Background(), -1, nil)
+		tasks, err = e.constructMPPTasksImpl(context.Background(), -1, false, nil)
 	}
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -92,10 +92,14 @@ func (e *mppTaskGenerator) generateMPPTasksForFragment(f *Fragment) (tasks []*kv
 }
 
 // single physical table means a table without partitions or a single partition in a partition table.
-func (e *mppTaskGenerator) constructMPPTasksImpl(ctx context.Context, tableID int64, ranges []*ranger.Range) ([]*kv.MPPTask, error) {
+func (e *mppTaskGenerator) constructMPPTasksImpl(ctx context.Context, tableID int64, isCommonHandle bool, ranges []*ranger.Range) ([]*kv.MPPTask, error) {
 	var kvRanges []kv.KeyRange
+	var err error
 	if tableID != -1 {
-		kvRanges = distsql.TableRangesToKVRanges(tableID, ranges, nil)
+		kvRanges, err = distsql.TableHandleRangesToKVRanges(e.ctx.GetSessionVars().StmtCtx, []int64{tableID}, isCommonHandle, ranges, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 	req := &kv.MPPBuildTasksRequest{KeyRanges: kvRanges}
 	metas, err := e.ctx.GetMPPClient().ConstructMPPTasks(ctx, req)
