@@ -1555,15 +1555,6 @@ func (p *LogicalJoin) tryToGetBroadCastJoin(prop *property.PhysicalProperty) []P
 		return nil
 	}
 
-	// Disable broadcast join on partition table for TiFlash.
-	for _, child := range p.children {
-		if ds, isDataSource := child.(*DataSource); isDataSource {
-			if ds.tableInfo.GetPartitionInfo() != nil {
-				return nil
-			}
-		}
-	}
-
 	if (p.JoinType != InnerJoin && p.JoinType != LeftOuterJoin && p.JoinType != RightOuterJoin && p.JoinType != SemiJoin && p.JoinType != AntiSemiJoin) || len(p.EqualConditions) == 0 {
 		return nil
 	}
