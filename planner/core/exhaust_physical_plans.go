@@ -1547,7 +1547,10 @@ func (p *LogicalJoin) tryToGetBroadCastJoin(prop *property.PhysicalProperty) []P
 	if prop.TaskTp != property.RootTaskType && !prop.IsFlashOnlyProp() {
 		return nil
 	}
-	_, _, _, hasNullEQ := p.GetJoinKeys()
+	hasNullEQ := false
+	for _, expr := range p.EqualConditions {
+		hasNullEQ = hasNullEQ || expr.FuncName.L == ast.NullEQ
+	}
 	if hasNullEQ {
 		return nil
 	}
